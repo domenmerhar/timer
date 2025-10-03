@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fullscreen Countdown Timer</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0e0e0e;
+            color: #f5f5f5;
+            --glow-intensity: 0.2;
+            --panel-alpha: 0.05;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #1f1f1f 0%, #070707 100%);
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255, 207, 150, 0.65), rgba(255, 95, 109, 0.15), rgba(7, 7, 7, 0));
+            opacity: var(--glow-intensity);
+            transition: opacity 0.6s ease;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+            width: min(88vw, 52rem);
+        }
+
+        .timer-display {
+            font-size: clamp(4rem, 18vw, 14rem);
+            letter-spacing: 0.05em;
+            font-variant-numeric: tabular-nums;
+            text-align: center;
+            transition: color 0.6s ease;
+            margin-bottom: 3rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            align-items: center;
+            background: rgba(255, 255, 255, var(--panel-alpha));
+            padding: 1.75rem 2.5rem;
+            border-radius: 1.25rem;
+            backdrop-filter: blur(8px);
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .time-input {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        label {
+            font-size: 0.8rem;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(245, 245, 245, 0.7);
+        }
+
+        input[type="number"] {
+            width: 5rem;
+            padding: 0.6rem;
+            border-radius: 0.65rem;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.45);
+            color: inherit;
+            font-size: 1.1rem;
+            text-align: center;
+            -moz-appearance: textfield;
+            transition: border-color 0.2s ease;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .button-row {
+            gap: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.75rem;
+            border: none;
+            border-radius: 2rem;
+            background: linear-gradient(135deg, #ff5f6d, #ffc371);
+            color: #111;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.18);
+            color: #f5f5f5;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+        }
+
+        @media (max-width: 600px) {
+            .controls {
+                width: min(90vw, 28rem);
+                padding: 1.5rem 1.75rem;
+            }
+
+            .controls-row {
+                gap: 1rem;
+            }
+
+            button {
+                flex: 1 1 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="timer-display" id="timerDisplay">00:00</div>
+        <section class="controls" aria-label="Countdown controls">
+            <div class="controls-row time-row">
+                <div class="time-input">
+                    <label for="hoursInput">Hours</label>
+                    <input type="number" id="hoursInput" name="hours" min="0" max="99" step="1" value="0">
+                </div>
+                <div class="time-input">
+                    <label for="minutesInput">Minutes</label>
+                    <input type="number" id="minutesInput" name="minutes" min="0" max="59" step="1" value="0">
+                </div>
+                <div class="time-input">
+                    <label for="secondsInput">Seconds</label>
+                    <input type="number" id="secondsInput" name="seconds" min="0" max="59" step="1" value="0">
+                </div>
+            </div>
+            <div class="controls-row button-row">
+                <button id="startButton">Start</button>
+                <button id="pauseButton" class="secondary" disabled>Pause</button>
+                <button id="resetButton" class="secondary" disabled>Reset</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const timerDisplay = document.getElementById('timerDisplay');
+        const hoursInput = document.getElementById('hoursInput');
+        const minutesInput = document.getElementById('minutesInput');
+        const secondsInput = document.getElementById('secondsInput');
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const resetButton = document.getElementById('resetButton');
+        const originalTitle = document.title;
+        const STORAGE_KEY = 'fullscreen-countdown-state';
+
+        let countdownId = null;
+        let remainingSeconds = 0;
+        let displayMode = 'short';
+        let isPaused = false;
+        let flashIntervalId = null;
+        let alarmIntervalId = null;
+        let saveIntervalId = null;
+        let totalDuration = 0;
+
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            if (displayMode === 'long') {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            const combinedMinutes = hours * 60 + minutes;
+            return `${combinedMinutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function setInputsDisabled(disabled) {
+            hoursInput.disabled = disabled;
+            minutesInput.disabled = disabled;
+            secondsInput.disabled = disabled;
+        }
+
+        function updateProgressVisual() {
+            if (!totalDuration || totalDuration <= 0) {
+                document.body.style.setProperty('--glow-intensity', '0.2');
+                document.body.style.setProperty('--panel-alpha', '0.05');
+                timerDisplay.style.color = '#f5f5f5';
+                return;
+            }
+
+            const progress = Math.min(1, Math.max(0, 1 - remainingSeconds / totalDuration));
+            const glowIntensity = Math.min(1, 0.2 + progress * 0.9);
+            const panelAlpha = Math.min(0.45, 0.05 + progress * 0.35);
+            const textLightness = Math.min(92, 80 + progress * 12);
+
+            document.body.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
+            document.body.style.setProperty('--panel-alpha', panelAlpha.toFixed(3));
+            timerDisplay.style.color = `hsl(32deg 100% ${textLightness}%)`;
+        }
+
+        function updateDisplay(seconds) {
+            timerDisplay.textContent = formatTime(seconds);
+            updateProgressVisual();
+        }
+
+        function clearCountdown() {
+            if (countdownId !== null) {
+                clearInterval(countdownId);
+                countdownId = null;
+            }
+        }
+
+        function beginTicking() {
+            clearCountdown();
+            countdownId = setInterval(() => {
+                remainingSeconds -= 1;
+                if (remainingSeconds <= 0) {
+                    handleCompletion();
+                    return;
+                }
+
+                updateDisplay(remainingSeconds);
+            }, 1000);
+        }
+
+        function playAlarmChime() {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) {
+                return;
+            }
+
+            try {
+                const context = new AudioContextClass();
+                const now = context.currentTime;
+                const duration = 2.2;
+                const releaseTime = 1.8;
+                const gain = context.createGain();
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.18, now + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + releaseTime);
+
+                const frequencies = [523.25, 659.25, 783.99];
+                let activeOscillators = frequencies.length;
+
+                frequencies.forEach((frequency, index) => {
+                    const oscillator = context.createOscillator();
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(frequency, now);
+                    oscillator.detune.setValueAtTime(index * 3, now);
+                    oscillator.connect(gain);
+                    const startOffset = index * 0.05;
+                    oscillator.start(now + startOffset);
+                    oscillator.stop(now + duration);
+                    oscillator.onended = () => {
+                        activeOscillators -= 1;
+                        if (activeOscillators === 0) {
+                            context.close().catch(() => {});
+                        }
+                    };
+                });
+
+                const shimmer = context.createOscillator();
+                const shimmerGain = context.createGain();
+                shimmer.type = 'sine';
+                shimmer.frequency.setValueAtTime(6, now);
+                shimmerGain.gain.setValueAtTime(0, now);
+                shimmerGain.gain.linearRampToValueAtTime(0.05, now + 0.1);
+                shimmerGain.gain.linearRampToValueAtTime(0, now + releaseTime);
+                shimmer.connect(shimmerGain);
+                shimmerGain.connect(gain.gain);
+                shimmer.start(now);
+                shimmer.stop(now + duration);
+
+                gain.connect(context.destination);
+            } catch (error) {
+                console.error('Unable to play completion sound', error);
+            }
+        }
+
+        function startAlarm() {
+            if (alarmIntervalId !== null) {
+                return;
+            }
+
+            playAlarmChime();
+            alarmIntervalId = setInterval(playAlarmChime, 4000);
+        }
+
+        function stopAlarm() {
+            if (alarmIntervalId !== null) {
+                clearInterval(alarmIntervalId);
+                alarmIntervalId = null;
+            }
+        }
+
+        function startFlashingTitle() {
+            if (flashIntervalId !== null) {
+                return;
+            }
+
+            let showOriginal = false;
+            document.title = "Time's up!";
+            flashIntervalId = setInterval(() => {
+                document.title = showOriginal ? originalTitle : "Time's up!";
+                showOriginal = !showOriginal;
+            }, 700);
+        }
+
+        function stopAlerts() {
+            if (flashIntervalId !== null) {
+                clearInterval(flashIntervalId);
+                flashIntervalId = null;
+            }
+            stopAlarm();
+            document.title = originalTitle;
+        }
+
+        function startAutosave() {
+            stopAutosave();
+            saveIntervalId = setInterval(() => saveState('running'), 60000);
+        }
+
+        function stopAutosave() {
+            if (saveIntervalId !== null) {
+                clearInterval(saveIntervalId);
+                saveIntervalId = null;
+            }
+        }
+
+        function saveState(status) {
+            if (!window.localStorage) {
+                return;
+            }
+
+            const state = {
+                hours: Number(hoursInput.value) || 0,
+                minutes: Number(minutesInput.value) || 0,
+                seconds: Number(secondsInput.value) || 0,
+                remainingSeconds,
+                totalDuration,
+                displayMode,
+                isPaused,
+                status,
+                timestamp: Date.now()
+            };
+
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (error) {
+                console.error('Unable to persist timer state', error);
+            }
+        }
+
+        function handleCompletion() {
+            clearCountdown();
+            stopAutosave();
+            remainingSeconds = 0;
+            updateDisplay(remainingSeconds);
+            setInputsDisabled(false);
+            startButton.disabled = false;
+            pauseButton.disabled = true;
+            pauseButton.textContent = 'Pause';
+            resetButton.disabled = false;
+            isPaused = false;
+            startAlarm();
+            startFlashingTitle();
+            saveState('completed');
+        }
+
+        function startCountdown() {
+            stopAlerts();
+            const hours = Number(hoursInput.value) || 0;
+            const minutes = Number(minutesInput.value) || 0;
+            const seconds = Number(secondsInput.value) || 0;
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+            if (totalSeconds <= 0) {
+                totalDuration = 0;
+                remainingSeconds = 0;
+                updateDisplay(0);
+                saveState('idle');
+                return;
+            }
+
+            displayMode = totalSeconds >= 3600 ? 'long' : 'short';
+            remainingSeconds = totalSeconds;
+            totalDuration = totalSeconds;
+            isPaused = false;
+
+            updateDisplay(remainingSeconds);
+            setInputsDisabled(true);
+            startButton.disabled = true;
+            pauseButton.disabled = false;
+            pauseButton.textContent = 'Pause';
+            resetButton.disabled = false;
+
+            beginTicking();
+            startAutosave();
+            saveState('running');
+        }
+
+        function togglePause() {
+            if (countdownId === null && !isPaused) {
+                return;
+            }
+
+            if (isPaused) {
+                isPaused = false;
+                pauseButton.textContent = 'Pause';
+                beginTicking();
+                startAutosave();
+                saveState('running');
+            } else {
+                clearCountdown();
+                stopAutosave();
+                isPaused = true;
+                pauseButton.textContent = 'Resume';
+                saveState('paused');
+            }
+        }
+
+        function resetCountdown() {
+            clearCountdown();
+            stopAlerts();
+            stopAutosave();
+            remainingSeconds = 0;
+            isPaused = false;
+            displayMode = 'short';
+            totalDuration = 0;
+            updateDisplay(0);
+            setInputsDisabled(false);
+            startButton.disabled = false;
+            pauseButton.disabled = true;
+            pauseButton.textContent = 'Pause';
+            resetButton.disabled = true;
+            saveState('idle');
+        }
+
+        function sanitizeInputValue(input) {
+            const cleaned = input.value.replace(/[^0-9]/g, '');
+            if (cleaned === '') {
+                input.value = '';
+                return;
+            }
+
+            const min = Number(input.min) || 0;
+            const maxAttr = input.getAttribute('max');
+            const max = maxAttr !== null ? Number(maxAttr) : Number.POSITIVE_INFINITY;
+            let numeric = Number(cleaned);
+            if (!Number.isFinite(numeric)) {
+                numeric = min;
+            }
+            numeric = Math.max(numeric, min);
+            if (Number.isFinite(max)) {
+                numeric = Math.min(numeric, max);
+            }
+            input.value = String(numeric);
+        }
+
+        function loadState() {
+            if (!window.localStorage) {
+                updateDisplay(0);
+                return;
+            }
+
+            let saved;
+            try {
+                saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            } catch (error) {
+                console.error('Unable to read timer state', error);
+                updateDisplay(0);
+                return;
+            }
+
+            if (!saved) {
+                updateDisplay(0);
+                return;
+            }
+
+            hoursInput.value = String(Math.min(Math.max(saved.hours ?? 0, 0), 99));
+            minutesInput.value = String(Math.min(Math.max(saved.minutes ?? 0, 0), 59));
+            secondsInput.value = String(Math.min(Math.max(saved.seconds ?? 0, 0), 59));
+
+            remainingSeconds = Math.max(saved.remainingSeconds ?? 0, 0);
+            totalDuration = Math.max(saved.totalDuration ?? (remainingSeconds || 0), 0);
+            displayMode = saved.displayMode === 'long' ? 'long' : 'short';
+            isPaused = Boolean(saved.isPaused);
+
+            if (remainingSeconds === 0 && totalDuration === 0) {
+                updateDisplay(0);
+                resetCountdown();
+                return;
+            }
+
+            const status = saved.status;
+            const now = Date.now();
+            const elapsed = Math.max(Math.floor((now - (saved.timestamp || now)) / 1000), 0);
+
+            if (status === 'running') {
+                remainingSeconds = Math.max(remainingSeconds - elapsed, 0);
+                totalDuration = Math.max(totalDuration, saved.totalDuration ?? 0, remainingSeconds);
+                displayMode = totalDuration >= 3600 ? 'long' : 'short';
+
+                if (remainingSeconds <= 0) {
+                    handleCompletion();
+                    return;
+                }
+
+                updateDisplay(remainingSeconds);
+                setInputsDisabled(true);
+                startButton.disabled = true;
+                pauseButton.disabled = false;
+                pauseButton.textContent = 'Resume';
+                resetButton.disabled = false;
+                isPaused = true;
+                saveState('paused');
+                return;
+            }
+
+            if (status === 'paused') {
+                updateDisplay(remainingSeconds);
+                setInputsDisabled(true);
+                startButton.disabled = true;
+                pauseButton.disabled = false;
+                pauseButton.textContent = 'Resume';
+                resetButton.disabled = false;
+                isPaused = true;
+                saveState('paused');
+                return;
+            }
+
+            if (status === 'completed') {
+                remainingSeconds = 0;
+                updateDisplay(remainingSeconds);
+                setInputsDisabled(false);
+                startButton.disabled = false;
+                pauseButton.disabled = true;
+                pauseButton.textContent = 'Pause';
+                resetButton.disabled = false;
+                startAlarm();
+                startFlashingTitle();
+                return;
+            }
+
+            updateDisplay(remainingSeconds);
+            setInputsDisabled(false);
+            startButton.disabled = remainingSeconds === 0 ? false : true;
+            pauseButton.disabled = true;
+            pauseButton.textContent = 'Pause';
+            resetButton.disabled = remainingSeconds === 0;
+        }
+
+        startButton.addEventListener('click', startCountdown);
+        pauseButton.addEventListener('click', togglePause);
+        resetButton.addEventListener('click', resetCountdown);
+
+        [hoursInput, minutesInput, secondsInput].forEach(input => {
+            input.addEventListener('input', () => {
+                sanitizeInputValue(input);
+            });
+
+            input.addEventListener('focus', () => input.select());
+        });
+
+        window.addEventListener('focus', stopAlerts);
+        window.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                stopAlerts();
+            }
+        });
+
+        loadState();
+        updateProgressVisual();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
