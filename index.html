@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,6 +42,11 @@
             position: relative;
             z-index: 1;
             width: min(88vw, 52rem);
+            margin-top: 7rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2.5rem;
         }
 
         .timer-display {
@@ -141,6 +147,137 @@
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
         }
 
+        .top-nav {
+            position: absolute;
+            top: 2.25rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.75rem;
+            width: min(88vw, 52rem);
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .nav-button {
+            padding: 0.6rem 1.5rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.16);
+            color: #f5f5f5;
+            transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .nav-button.active {
+            background: linear-gradient(135deg, #ff5f6d, #ffc371);
+            color: #111;
+            box-shadow: 0 8px 24px rgba(255, 95, 109, 0.35);
+        }
+
+        .view {
+            display: none;
+            width: 100%;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .view-timer.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .calendar-panel {
+            background: rgba(255, 255, 255, var(--panel-alpha));
+            padding: 1.75rem 2rem;
+            border-radius: 1.25rem;
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .calendar-month {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .calendar-nav-button {
+            padding: 0.45rem 0.95rem;
+            border-radius: 0.9rem;
+        }
+
+        .calendar-meta {
+            font-size: 0.9rem;
+            color: rgba(245, 245, 245, 0.75);
+            letter-spacing: 0.03em;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(2.75rem, 1fr));
+            gap: 0.5rem;
+        }
+
+        .calendar-cell {
+            text-align: center;
+            padding: 0.65rem 0.4rem;
+            border-radius: 0.85rem;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.95rem;
+            letter-spacing: 0.03em;
+        }
+
+        .calendar-cell.weekday {
+            background: transparent;
+            border: none;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: rgba(245, 245, 245, 0.65);
+            padding-bottom: 0.2rem;
+        }
+
+        .calendar-cell.placeholder {
+            background: transparent;
+            border: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .calendar-cell.inactive {
+            opacity: 0.35;
+        }
+
+        .calendar-cell.success {
+            background: rgba(84, 255, 169, 0.18);
+            border-color: rgba(84, 255, 169, 0.5);
+            color: #53ff9b;
+        }
+
+        .calendar-cell.missed {
+            background: rgba(255, 95, 109, 0.18);
+            border-color: rgba(255, 95, 109, 0.45);
+            color: #ff8a96;
+        }
+
+        .calendar-cell.today {
+            outline: 1px dashed rgba(255, 255, 255, 0.35);
+            outline-offset: 2px;
+        }
+
+
         @media (max-width: 600px) {
             .controls {
                 width: min(90vw, 28rem);
@@ -154,31 +291,68 @@
             button {
                 flex: 1 1 auto;
             }
+
+            .calendar-grid {
+                grid-template-columns: repeat(7, minmax(2.2rem, 1fr));
+                gap: 0.35rem;
+            }
+
+            .calendar-panel {
+                padding: 1.5rem;
+            }
+
+            .top-nav {
+                width: min(92vw, 52rem);
+                top: 1.75rem;
+            }
+
         }
     </style>
 </head>
+
 <body>
+    <header class="top-nav" aria-label="Primary">
+        <button type="button" class="nav-button active" data-view="timerView" id="timerTab"
+            aria-pressed="true">Timer</button>
+        <button type="button" class="nav-button" data-view="calendarView" id="calendarTab"
+            aria-pressed="false">Calendar</button>
+    </header>
     <main>
-        <div class="timer-display" id="timerDisplay">00:00</div>
-        <section class="controls" aria-label="Countdown controls">
-            <div class="controls-row time-row">
-                <div class="time-input">
-                    <label for="hoursInput">Hours</label>
-                    <input type="number" id="hoursInput" name="hours" min="0" max="99" step="1" value="0">
+        <section class="view view-timer active" id="timerView" role="region" aria-labelledby="timerTab">
+            <div class="timer-display" id="timerDisplay">00:00</div>
+            <section class="controls" aria-label="Countdown controls">
+                <div class="controls-row time-row">
+                    <div class="time-input">
+                        <label for="hoursInput">Hours</label>
+                        <input type="number" id="hoursInput" name="hours" min="0" max="99" step="1" value="0">
+                    </div>
+                    <div class="time-input">
+                        <label for="minutesInput">Minutes</label>
+                        <input type="number" id="minutesInput" name="minutes" min="0" max="59" step="1" value="0">
+                    </div>
+                    <div class="time-input">
+                        <label for="secondsInput">Seconds</label>
+                        <input type="number" id="secondsInput" name="seconds" min="0" max="59" step="1" value="0">
+                    </div>
                 </div>
-                <div class="time-input">
-                    <label for="minutesInput">Minutes</label>
-                    <input type="number" id="minutesInput" name="minutes" min="0" max="59" step="1" value="0">
+                <div class="controls-row button-row">
+                    <button id="startButton">Start</button>
+                    <button id="pauseButton" class="secondary" disabled>Pause</button>
+                    <button id="resetButton" class="secondary" disabled>Reset</button>
                 </div>
-                <div class="time-input">
-                    <label for="secondsInput">Seconds</label>
-                    <input type="number" id="secondsInput" name="seconds" min="0" max="59" step="1" value="0">
+            </section>
+        </section>
+        <section class="view view-calendar" id="calendarView" role="region" aria-labelledby="calendarTab">
+            <div class="calendar-panel">
+                <div class="calendar-header">
+                    <button type="button" class="secondary calendar-nav-button" id="calendarPrev"
+                        aria-label="Previous month">&lt;</button>
+                    <div class="calendar-month" id="calendarMonthLabel">Month</div>
+                    <button type="button" class="secondary calendar-nav-button" id="calendarNext"
+                        aria-label="Next month">&gt;</button>
                 </div>
-            </div>
-            <div class="controls-row button-row">
-                <button id="startButton">Start</button>
-                <button id="pauseButton" class="secondary" disabled>Pause</button>
-                <button id="resetButton" class="secondary" disabled>Reset</button>
+                <div class="calendar-meta" id="calendarStreakLabel">Current streak: 0 days</div>
+                <div class="calendar-grid" id="calendarGrid" role="grid" aria-live="polite"></div>
             </div>
         </section>
     </main>
@@ -193,6 +367,15 @@
         const resetButton = document.getElementById('resetButton');
         const originalTitle = document.title;
         const STORAGE_KEY = 'fullscreen-countdown-state';
+        const USAGE_STORAGE_KEY = 'fullscreen-countdown-usage-dates';
+        const navButtons = document.querySelectorAll('.nav-button');
+        const views = document.querySelectorAll('.view');
+        const calendarView = document.getElementById('calendarView');
+        const calendarGrid = document.getElementById('calendarGrid');
+        const calendarMonthLabel = document.getElementById('calendarMonthLabel');
+        const calendarStreakLabel = document.getElementById('calendarStreakLabel');
+        const previousMonthButton = document.getElementById('calendarPrev');
+        const nextMonthButton = document.getElementById('calendarNext');
 
         let countdownId = null;
         let remainingSeconds = 0;
@@ -202,6 +385,8 @@
         let alarmIntervalId = null;
         let saveIntervalId = null;
         let totalDuration = 0;
+        let usageDates = [];
+        let currentCalendarMonth = null;
 
         function formatTime(totalSeconds) {
             const hours = Math.floor(totalSeconds / 3600);
@@ -238,6 +423,165 @@
             document.body.style.setProperty('--glow-intensity', glowIntensity.toFixed(3));
             document.body.style.setProperty('--panel-alpha', panelAlpha.toFixed(3));
             timerDisplay.style.color = `hsl(32deg 100% ${textLightness}%)`;
+        }
+
+        function formatLocalDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function dateStringToValue(value) {
+            if (typeof value !== 'string') {
+                return NaN;
+            }
+            const parts = value.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) {
+                return NaN;
+            }
+            const [year, month, day] = parts;
+            return new Date(year, month - 1, day).setHours(0, 0, 0, 0);
+        }
+
+        function startOfMonth(date) {
+            const base = new Date(date.getFullYear(), date.getMonth(), 1);
+            base.setHours(0, 0, 0, 0);
+            return base;
+        }
+
+        function shiftMonth(date, offset) {
+            const shifted = new Date(date);
+            shifted.setMonth(shifted.getMonth() + offset);
+            return startOfMonth(shifted);
+        }
+
+        function loadUsageDates() {
+            try {
+                const raw = JSON.parse(localStorage.getItem(USAGE_STORAGE_KEY));
+                if (!Array.isArray(raw)) {
+                    return [];
+                }
+                const filtered = raw.filter((value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value));
+                filtered.sort();
+                return filtered;
+            } catch (error) {
+                console.error('Unable to read usage history', error);
+                return [];
+            }
+        }
+
+        function persistUsageDates(dates) {
+            try {
+                localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(dates));
+            } catch (error) {
+                console.error('Unable to store usage history', error);
+            }
+        }
+
+        function recordUsageDate(usageDate = new Date()) {
+            const dateString = formatLocalDate(usageDate);
+            if (!usageDates.includes(dateString)) {
+                usageDates.push(dateString);
+                usageDates.sort();
+                persistUsageDates(usageDates);
+            }
+            if (calendarView && calendarView.classList.contains('active')) {
+                renderCalendar();
+            }
+        }
+
+        function computeCurrentStreak(dates) {
+            if (!dates || dates.length === 0) {
+                return 0;
+            }
+            const ordered = [...dates].sort();
+            let streak = 1;
+            for (let index = ordered.length - 1; index > 0; index -= 1) {
+                const current = dateStringToValue(ordered[index]);
+                const previous = dateStringToValue(ordered[index - 1]);
+                if (!Number.isFinite(current) || !Number.isFinite(previous)) {
+                    break;
+                }
+                if (current - previous === 86_400_000) {
+                    streak += 1;
+                } else {
+                    break;
+                }
+            }
+            return streak;
+        }
+
+        function renderCalendar() {
+            if (!calendarGrid || !calendarMonthLabel) {
+                return;
+            }
+
+            const now = new Date();
+            const todayValue = dateStringToValue(formatLocalDate(now));
+            const earliestValue = usageDates.length > 0 ? dateStringToValue(usageDates[0]) : null;
+            const month = currentCalendarMonth || startOfMonth(now);
+            currentCalendarMonth = month;
+
+            calendarMonthLabel.textContent = month.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+            const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            calendarGrid.innerHTML = '';
+
+            weekdayLabels.forEach((label) => {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell weekday';
+                cell.textContent = label;
+                cell.setAttribute('role', 'columnheader');
+                calendarGrid.appendChild(cell);
+            });
+
+            const firstDay = new Date(month);
+            const offset = (firstDay.getDay() + 6) % 7;
+            for (let index = 0; index < offset; index += 1) {
+                const filler = document.createElement('div');
+                filler.className = 'calendar-cell placeholder';
+                filler.setAttribute('aria-hidden', 'true');
+                calendarGrid.appendChild(filler);
+            }
+
+            const usageSet = new Set(usageDates);
+            const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+
+            for (let day = 1; day <= daysInMonth; day += 1) {
+                const date = new Date(month.getFullYear(), month.getMonth(), day);
+                date.setHours(0, 0, 0, 0);
+                const dateString = formatLocalDate(date);
+                const value = date.getTime();
+
+                const cell = document.createElement('div');
+                cell.className = 'calendar-cell';
+                cell.textContent = String(day);
+                cell.setAttribute('role', 'gridcell');
+                cell.setAttribute('aria-label', date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+
+                if (earliestValue !== null && value < earliestValue) {
+                    cell.classList.add('inactive');
+                } else if (usageSet.has(dateString)) {
+                    cell.classList.add('success');
+                } else if (earliestValue !== null && value >= earliestValue && value <= todayValue) {
+                    cell.classList.add('missed');
+                } else if (earliestValue === null && value <= todayValue) {
+                    cell.classList.add('inactive');
+                }
+
+                if (value === todayValue) {
+                    cell.classList.add('today');
+                }
+
+                calendarGrid.appendChild(cell);
+            }
+
+            if (calendarStreakLabel) {
+                const streak = computeCurrentStreak(usageDates);
+                const suffix = streak === 1 ? 'day' : 'days';
+                calendarStreakLabel.textContent = `Current streak: ${streak} ${suffix}`;
+            }
         }
 
         function updateDisplay(seconds) {
@@ -296,7 +640,7 @@
                     oscillator.onended = () => {
                         activeOscillators -= 1;
                         if (activeOscillators === 0) {
-                            context.close().catch(() => {});
+                            context.close().catch(() => { });
                         }
                     };
                 });
@@ -407,6 +751,7 @@
             startAlarm();
             startFlashingTitle();
             saveState('completed');
+            recordUsageDate();
         }
 
         function startCountdown() {
@@ -596,6 +941,47 @@
         pauseButton.addEventListener('click', togglePause);
         resetButton.addEventListener('click', resetCountdown);
 
+        usageDates = loadUsageDates();
+        currentCalendarMonth = startOfMonth(new Date());
+        renderCalendar();
+
+        navButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const viewId = button.getAttribute('data-view');
+                if (!viewId) {
+                    return;
+                }
+
+                navButtons.forEach((navButton) => {
+                    const isActive = navButton === button;
+                    navButton.classList.toggle('active', isActive);
+                    navButton.setAttribute('aria-pressed', String(isActive));
+                });
+
+                views.forEach((view) => {
+                    view.classList.toggle('active', view.id === viewId);
+                });
+
+                if (viewId === 'calendarView') {
+                    renderCalendar();
+                }
+            });
+        });
+
+        if (previousMonthButton) {
+            previousMonthButton.addEventListener('click', () => {
+                currentCalendarMonth = shiftMonth(currentCalendarMonth || new Date(), -1);
+                renderCalendar();
+            });
+        }
+
+        if (nextMonthButton) {
+            nextMonthButton.addEventListener('click', () => {
+                currentCalendarMonth = shiftMonth(currentCalendarMonth || new Date(), 1);
+                renderCalendar();
+            });
+        }
+
         [hoursInput, minutesInput, secondsInput].forEach(input => {
             input.addEventListener('input', () => {
                 sanitizeInputValue(input);
@@ -613,20 +999,8 @@
 
         loadState();
         updateProgressVisual();
+        renderCalendar();
     </script>
 </body>
+
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
